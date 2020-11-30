@@ -1,0 +1,245 @@
+#include<iostream>
+#include<string>
+#include<fstream>
+#include<vector>
+
+using namespace std;
+
+struct logData{
+	string date;         //＜確認日時＞
+	string ipv4;         //＜サーバアドレス＞
+	string response;     //＜応答結果＞
+};
+
+struct Time{
+	int year;   //年
+	int month;  //月
+	int day;    //日
+	int hour;   //時間
+	int minute; //分
+	int seconds;//秒
+};
+
+vector<string> split(string str , string word){  //文字を分割する関数
+	vector<string> result;    //分割結果を保存する
+	int num1=0,num2;
+
+	while(str.find(word)!=-1){
+		num2=str.find(word);   //分割文字が何文字目か確認
+		result.push_back(str.substr(num1,num2-num1));   //num1からnum2までの文字をresultに追加
+		str[num2] = *" ";       //分割文字を消す
+		num1=num2+1;
+	}
+	result.push_back(str.substr(num1));    //最後余った文字を追加
+	
+	return result;
+}
+
+void Time_in(Time &t , string s){  //文字列の時間を数値に直して年月日時間に分ける
+	t.year = stoi(s.substr(0,4));
+	t.month = stoi(s.substr(4,2));
+	t.day = stoi(s.substr(6,2));
+	t.hour = stoi(s.substr(8,2));
+	t.minute = stoi(s.substr(10,2));
+	t.seconds = stoi(s.substr(12,2));
+}
+
+int Time_difference(Time time1 , Time time2){  //故障期間を知るための関数
+	int num[6];     //2つの時間差を入れる
+	int time=0; //故障期間を文字列で入れる
+	
+	num[0] = time1.year - time2.year;        //時間差を入れている
+	num[1] = time1.month - time2.month;
+	num[2] = time1.day - time2.day;
+	num[3] = time1.hour - time2.hour;
+	num[4] = time1.minute - time2.minute;
+	num[5] = time1.seconds - time2.seconds;
+	
+	for(int i=5;i>=0;i--){     //差がマイナスになった場合、繰り上げる
+		if(num[i]<0){
+			if(i>=4){
+				num[i]+=60;
+			}else if(i=3){
+				num[i]+=24;
+			}else if(i=4){
+				num[i]+=30;   //今回は1月を30日で計算している。
+			}else if(i=5){
+				num[i]+=12;
+			}else{
+				return time;
+			}
+			num[i-1]-=1;
+		}
+	}
+	
+	if(num[0]>0){ time += (num[0]*12*30*24*60*60); }
+	if(num[1]>0){ time += (num[1]*30*24*60*60); }
+	if(num[2]>0){ time += (num[2]*24*60*60); }
+	if(num[3]>0){ time += (num[3]*60*60); }
+	if(num[4]>0){ time += (num[4]*60); }
+	if(num[5]>0){ time += num[5]; }
+	
+	return time;
+}
+
+int subnet(string str){
+	string s="";
+	bool flag=false;
+	for(int i=0;i<str.size();i++){
+		if(flag){
+			s+=str[i];
+		}
+		if(str[i]=='/'){
+			flag=true;
+		}
+	}
+	return stoi(s);
+}
+
+int main(){
+	int N;
+	cout<<"何回連続でタイムアウトした場合にのみ故障とみなすようにしますか？\n";
+	cin>>N;
+	int m,t;
+	cout<<"直近m回の平均応答時間がtミリ秒を超えた場合は、サーバが過負荷状態になっているとみなす\n";
+	cout<<"m = ";
+	cin>>m;
+	cout<<"t = ";
+	cin>>t;
+	
+	string filename="server_test.txt";  //監視ログファイルを入れる
+	ifstream fin(filename);
+	
+	if (!fin){    //ファイルが見つからない場合
+		cout << "Can not open file" << endl;
+		return 0;
+	}
+	
+	logData log;
+	vector<logData> v;
+	vector<string> str;
+	string line;
+	
+	while(fin>>line){
+		vector<string> ary = split(line,",");
+		log.date = ary[0];
+		log.ipv4 = ary[1];
+		log.response = ary[2];
+		v.push_back(log);
+	}
+	
+	
+	vector<string> error_ipv4;
+	Time T;
+	vector<Time> vtime;
+	vector<int> error_count;
+	bool Flag;
+	
+	vector<int> count;
+	vector<string> ipv4;
+	vector<Time> vtime2;
+	bool Flag2;
+	
+	vector<int> subnet_count;
+	vector<int> subnet_error;
+	vector<Time> subnet_time;
+	vector<int> subnet_num;
+	
+	for(int i=0;i<v.size();i++){
+		//設問１と2
+		if(v[i].response=="-"){
+			Flag=true;
+			for(int k=0;k<error_ipv4.size();k++){
+				if(error_ipv4[k]==v[i].ipv4){
+					error_count[k]+=1;
+					Flag=false;
+					break;
+				}
+			}
+			if(Flag){
+				error_ipv4.push_back(v[i].ipv4);
+				Time_in(T,v[i].date);
+				vtime.push_back(T);
+				error_count.push_back(1);
+			}
+			for(int j=0;j<error_ipv4.size();j++){
+				if(error_ipv4[j]==v[i].ipv4 && error_count[j]>=N){
+					Time_in(T,v[i].date);
+					int time=Time_difference(T,vtime[j]);
+					cout<<"故障したIPv4: "<<error_ipv4[j];
+					cout<<" 故障期間: "<<time<<"秒間"<<endl;
+					error_ipv4.erase(error_ipv4.begin()+j);
+					vtime.erase(vtime.begin()+j);
+					error_count.erase(error_count.begin()+j);
+				}
+			}
+		}else{
+			for(int j=0;j<error_ipv4.size();j++){
+				if(error_ipv4[j]==v[i].ipv4){
+					error_ipv4.erase(error_ipv4.begin()+j);
+					vtime.erase(vtime.begin()+j);
+					error_count.erase(error_count.begin()+j);
+				}
+			}
+		}
+		
+		//設問3
+		for(int l=0; l<count.size(); l++){
+			if(ipv4[l]==v[i].ipv4){
+				count[l]+=1;
+			}
+			if(m==count[l]){
+				Time_in(T,v[i].date);
+				int time2=Time_difference(T,vtime2[l]);
+				if((time2/m)>t){
+					cout<<ipv4[l]<<"サーバが過負荷状態になっている"<<endl;
+				}
+			}
+		}
+		
+		ipv4.push_back(v[i].ipv4);
+		Time_in(T,v[i].date);
+		vtime2.push_back(T);
+		count.push_back(1);
+		
+		//設問4
+		/*int x=subnet(v[i].ipv4);
+		bool Flag3=true;
+		if(v[i].response=="-"){
+			for(int a=0;a<subnet_count.size();a++){
+				if(x==subnet_num[a]){
+					subnet_count[a]+=1;
+					subnet_error[a]+=1;
+					Flag3=false;
+				}
+			}
+			if(Flag3){
+				subnet_count.push_back(1);
+				subnet_error.push_back(1);
+				subnet_num.push_back(x);
+			}
+		}else{
+			for(int a=0;a<subnet_count.size();a++){
+				if(x==subnet_num[a]){
+					subnet_count[a]+=1;
+					subnet_error[a]=0;
+					Flag3=false;
+				}
+			}
+			if(Flag3){
+				subnet_count.push_back(1);
+				subnet_error.push_back(0);
+				subnet_num.push_back(x);
+			}
+		}
+		subnet_num.push_back(x);
+		subnet_count.push_back(1);
+		subnet_error.push_back(0);
+		Time_in(T,v[i].date);
+		vtime2.push_back(T);
+		count.push_back(1);
+		*/
+	}
+	return 0;
+}
+
