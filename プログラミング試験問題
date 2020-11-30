@@ -128,61 +128,62 @@ int main(){
 		v.push_back(log);
 	}
 	
-	//設問1、2
+	//設問1と2で使用する変数
 	vector<string> error_ipv4;
 	Time T;
 	vector<Time> vtime;
 	vector<int> error_count;
 	bool Flag;
 	
-	//設問3
+	//設問3で使用する変数
 	vector<int> count;
 	vector<string> ipv4;
 	vector<Time> vtime2;
 	bool Flag2;
 	
-	//設問4
+	//設問4で使用する変数
 	vector<int> subnet_error;
 	vector<Time> subnet_time;
 	vector<int> subnet_num;
 	
 	for(int i=0;i<v.size();i++){
 		//設問１と2
-		if(v[i].response=="-"){
+		if(v[i].response=="-"){     //タイムアウトした
 			Flag=true;
 			for(int k=0;k<error_ipv4.size();k++){
-				if(error_ipv4[k]==v[i].ipv4){
+				if(error_ipv4[k]==v[i].ipv4){   //何回連続でタイムアウトしたか数えている
 					error_count[k]+=1;
 					Flag=false;
 					break;
 				}
 			}
-			if(Flag){
+			if(Flag){   //IPv4アドレス毎の1回目のタイムアウトの場合、データを保存
 				error_ipv4.push_back(v[i].ipv4);
 				Time_in(T,v[i].date);
 				vtime.push_back(T);
 				error_count.push_back(1);
 			}
 			for(int j=0;j<error_ipv4.size();j++){
-				if(error_ipv4[j]==v[i].ipv4 && error_count[j]>=N){
+				if(error_ipv4[j]==v[i].ipv4 && error_count[j]>=N){  //N回以上連続でタイムアウトしたものを出力
 					Time_in(T,v[i].date);
-					int time=Time_difference(T,vtime[j]);
+					int time=Time_difference(T,vtime[j]);  //故障期間を数値に変換
 					cout<<"故障したIPv4: "<<error_ipv4[j];
 					cout<<" 故障期間: "<<time<<"秒間"<<endl;
-					error_ipv4.erase(error_ipv4.begin()+j);
+					error_ipv4.erase(error_ipv4.begin()+j);  //出力したデータを削除
 					vtime.erase(vtime.begin()+j);
 					error_count.erase(error_count.begin()+j);
 				}
 			}
 		}else{
 			for(int j=0;j<error_ipv4.size();j++){
-				if(error_ipv4[j]==v[i].ipv4){
-					error_ipv4.erase(error_ipv4.begin()+j);
+				if(error_ipv4[j]==v[i].ipv4){       //N回以上連続でタイムアウトする前に直った場合
+					error_ipv4.erase(error_ipv4.begin()+j);  //データを削除
 					vtime.erase(vtime.begin()+j);
 					error_count.erase(error_count.begin()+j);
 				}
 			}
 		}
+		//ここまでが設問1と2
 		
 		//設問3
 		for(int l=0; l<count.size(); l++){
@@ -191,50 +192,55 @@ int main(){
 			}
 			if(m==count[l]){
 				Time_in(T,v[i].date);
-				int time2=Time_difference(T,vtime2[l]);
-				if((time2*10/m)>t){
+				int time2=Time_difference(T,vtime2[l]);  //サーバの応答時間を数値にする
+				if((time2*10/m)>t){    //指定した条件を満たす場合出力
 					cout<<ipv4[l]<<"サーバが過負荷状態になっている"<<endl;
 				}
 			}
 		}
 		
-		ipv4.push_back(v[i].ipv4);
+		ipv4.push_back(v[i].ipv4);     //値を保存する
 		Time_in(T,v[i].date);
 		vtime2.push_back(T);
 		count.push_back(1);
+		//ここまでが設問3
 		
 		//設問4
 		int x=subnet(v[i].ipv4);
 		bool Flag3=true;
-		if(v[i].response=="-"){
+		if(v[i].response=="-"){      //タイムアウトした
 			for(int a=0;a<subnet_num.size();a++){
-				if(x==subnet_num[a]){
+				if(x==subnet_num[a]){     //何回連続でタイムアウトしたか数えている
 					subnet_error[a]+=1;
 					Flag3=false;
 				}
 			}
-			if(Flag3){
+			if(Flag3){     //サブネット毎の1回目のタイムアウトの場合、データを保存
 				subnet_error.push_back(1);
 				subnet_num.push_back(x);
 				Time_in(T,v[i].date);
 				subnet_time.push_back(T);
 			}
 			for(int b=0;b<subnet_num.size();b++){
-				if(subnet_error[b]>N){
+				if(subnet_error[b]>=N){      //N回以上連続でタイムアウトしたものを出力
 					Time_in(T,v[i].date);
-					int stime=Time_difference(T,subnet_time[b]);
+					int stime=Time_difference(T,subnet_time[b]);  //故障期間を数値に変換
 					cout<<"故障したサブネット: /"<<subnet_num[b]<<" 故障期間: "<<stime<<"秒間"<<endl;
+					subnet_error.erase(subnet_error.begin()+b);  //出力したデータを削除
+					subnet_time.erase(subnet_time.begin()+b);
+					subnet_num.erase(subnet_num.begin()+b);
 				}
 			}
 		}else{
-			for(int a=0;a<subnet_num.size();a++){
-				if(x==subnet_num[a]){
+			for(int a=0;a<subnet_num.size();a++){    //N回以上連続でタイムアウトする前に直った場合
+				if(x==subnet_num[a]){                //データを削除する
 					subnet_error.erase(subnet_error.begin()+a);
 					subnet_time.erase(subnet_time.begin()+a);
 					subnet_num.erase(subnet_num.begin()+a);
 				}
 			}
 		}
+		//ここまでが設問4
 	}
 	return 0;
 }
