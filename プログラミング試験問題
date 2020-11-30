@@ -128,19 +128,20 @@ int main(){
 		v.push_back(log);
 	}
 	
-	
+	//設問1、2
 	vector<string> error_ipv4;
 	Time T;
 	vector<Time> vtime;
 	vector<int> error_count;
 	bool Flag;
 	
+	//設問3
 	vector<int> count;
 	vector<string> ipv4;
 	vector<Time> vtime2;
 	bool Flag2;
 	
-	vector<int> subnet_count;
+	//設問4
 	vector<int> subnet_error;
 	vector<Time> subnet_time;
 	vector<int> subnet_num;
@@ -191,7 +192,7 @@ int main(){
 			if(m==count[l]){
 				Time_in(T,v[i].date);
 				int time2=Time_difference(T,vtime2[l]);
-				if((time2/m)>t){
+				if((time2*10/m)>t){
 					cout<<ipv4[l]<<"サーバが過負荷状態になっている"<<endl;
 				}
 			}
@@ -203,42 +204,37 @@ int main(){
 		count.push_back(1);
 		
 		//設問4
-		/*int x=subnet(v[i].ipv4);
+		int x=subnet(v[i].ipv4);
 		bool Flag3=true;
 		if(v[i].response=="-"){
-			for(int a=0;a<subnet_count.size();a++){
+			for(int a=0;a<subnet_num.size();a++){
 				if(x==subnet_num[a]){
-					subnet_count[a]+=1;
 					subnet_error[a]+=1;
 					Flag3=false;
 				}
 			}
 			if(Flag3){
-				subnet_count.push_back(1);
 				subnet_error.push_back(1);
 				subnet_num.push_back(x);
+				Time_in(T,v[i].date);
+				subnet_time.push_back(T);
 			}
-		}else{
-			for(int a=0;a<subnet_count.size();a++){
-				if(x==subnet_num[a]){
-					subnet_count[a]+=1;
-					subnet_error[a]=0;
-					Flag3=false;
+			for(int b=0;b<subnet_num.size();b++){
+				if(subnet_error[b]>N){
+					Time_in(T,v[i].date);
+					int stime=Time_difference(T,subnet_time[b]);
+					cout<<"故障したサブネット: /"<<subnet_num[b]<<" 故障期間: "<<stime<<"秒間"<<endl;
 				}
 			}
-			if(Flag3){
-				subnet_count.push_back(1);
-				subnet_error.push_back(0);
-				subnet_num.push_back(x);
+		}else{
+			for(int a=0;a<subnet_num.size();a++){
+				if(x==subnet_num[a]){
+					subnet_error.erase(subnet_error.begin()+a);
+					subnet_time.erase(subnet_time.begin()+a);
+					subnet_num.erase(subnet_num.begin()+a);
+				}
 			}
 		}
-		subnet_num.push_back(x);
-		subnet_count.push_back(1);
-		subnet_error.push_back(0);
-		Time_in(T,v[i].date);
-		vtime2.push_back(T);
-		count.push_back(1);
-		*/
 	}
 	return 0;
 }
